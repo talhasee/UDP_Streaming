@@ -3,6 +3,7 @@ import socket, time
 import threading
 import numpy as np
 import base64
+import sys
 
 BUFF_SIZE = 1500
 # Method responsible ffor handling the client_connection.
@@ -97,6 +98,18 @@ def handle_client(addr, tcp_Addr):
 
     print('Successfully terminated connection with the client:', addr)
 
+def get_ip_address():
+    try:
+        # Create a temporary socket to get the IP address
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect(("8.8.8.8", 80))  # Connecting to a known external server
+        ip_address = sock.getsockname()[0]
+        sock.close()
+        return ip_address
+    except socket.error as e:
+        print("Error occurred:", e)
+        return None
+
 # Creating the server socket (UDP)
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -105,8 +118,15 @@ tcp_Server_Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFF_SIZE)
 host_name = socket.gethostname()
-host_ip = "192.168.29.182"
-# host_ip = "192.168.233.1"
+
+host_ip = get_ip_address()
+
+if host_ip:
+    print("IP Address: ", host_ip)
+else:
+    print("Failed to obtain IP Address. Exiting the code")
+    sys.exit(1)
+
 port = 12345
 tcp_port = 12346
 socket_address = (host_ip, port)

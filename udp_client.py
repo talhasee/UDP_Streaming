@@ -5,9 +5,22 @@ import time
 import base64
 import threading
 import queue
+import sys
 import matplotlib.pyplot as plt
 
 BUFFER_SIZE = 2000  
+
+def get_ip_address():
+    try:
+        # Create a temporary socket to get the IP address
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect(("8.8.8.8", 80))  # Connecting to a known external server
+        ip_address = sock.getsockname()[0]
+        sock.close()
+        return ip_address
+    except socket.error as e:
+        print("Error occurred:", e)
+        return None
 
 # Creating a socket for client (TCP socket)
 tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -16,7 +29,15 @@ tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Define server's address
-server_ip = "192.168.29.182"
+server_ip = get_ip_address()
+
+if server_ip:
+    print("IP Address:", server_ip)
+else:
+    print("Failed to obtain IP address. Exiting the script.")
+    sys.exit(1)
+
+
 server_port = 12345
 tcp_server_port = 12346
 
