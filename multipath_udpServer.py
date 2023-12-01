@@ -14,7 +14,7 @@ def handle_client(addr, addr1, tcp_Addr):
 
     fps, st, frames_cnt, count = (0, 0, 20, 0)
     display = 0
-    change = 0
+    change = 1
     vid = cv2.VideoCapture("Short.mp4")
 
     while vid.isOpened(): 
@@ -33,9 +33,6 @@ def handle_client(addr, addr1, tcp_Addr):
         if count % 10 == 0:
             change ^= 1
 
-        # Fetching frame size. 
-        # print(frame.size)
-
         # Encoding the frame and obtaining a buffer out of it. (buffer contains byte-array -> pixel values)
         encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
         # Calculate the size of the frame buffer.
@@ -49,12 +46,9 @@ def handle_client(addr, addr1, tcp_Addr):
         else:
             frame_size_str = "|2" + timestamp + str(frame_size)
 
-        # Send the frame size to the client before sending the frame data (Sending via UDP socket)
-        # server_socket.sendto(frame_size_str.encode(), addr)
-
         # Updating the frame_displayed_count.
         display += 1
-        print("Sent packet num - ", display," with size - ", frame_size_str)
+        # print("Sent packet num - ", display," with size - ", frame_size_str)
 
         #Send the frame size to the client before sending the frame data (Sending via TCP socket)
         tcp_Socket.send(frame_size_str.encode())
@@ -73,6 +67,10 @@ def handle_client(addr, addr1, tcp_Addr):
                 server_socket.sendto(encoded_chunk, addr)
             else:
                 server_socket2.sendto(encoded_chunk, addr1)
+
+            # print(display," ", encoded_chunk)
+            if(encoded_chunk == None):
+                print("yes")
 
         # Displaying the frame statistics at server side (for debugging purpose).
         # print("Frame -Time ", timestamp, "FRAME NUM - ", display ," ", frame_size, " SENT chunks - ", chunks)
@@ -131,25 +129,15 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 server_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# udp_RttSocket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-# udp_RttSocket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
 # Creating the server socket (TCP)
 tcp_Server_Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFF_SIZE)
 server_socket2.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFF_SIZE)
 
-#leave it for now
-# udp_RttSocket1.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFF_SIZE)
-# udp_RttSocket2.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFF_SIZE)
-
-
 host_name = socket.gethostname()
 
 host_ip = get_ip_address()
-444
 if host_ip:
     print("IP Address: ", host_ip)
 else:
@@ -159,8 +147,9 @@ else:
 port = 12345
 port1 = 12347
 tcp_port = 12346
+host_ip2 = "192.168.29.64"
 socket_address = (host_ip, port)
-socket_address2 = (host_ip, port1)
+socket_address2 = (host_ip2, port1)
 
 tcp_Socket_Address = (host_ip, tcp_port)
 
@@ -175,10 +164,6 @@ server_socket.bind(socket_address)
 
 server_socket2.bind(socket_address2)
 
-
-# Listen for connections
-# print("Listening for connections on", host_ip)
-
 # Accept a client connection --> Blocking Call
 data, addr = server_socket.recvfrom(1024)
 print('Connection from: (UDP)', addr)
@@ -189,7 +174,7 @@ data1, addr1 = server_socket2.recvfrom(1024)
 print('Connection from: (UDP)', addr1)
 
 tcp_Socket, tcp_Addr = tcp_Server_Socket.accept()
-print("Connection from: (UDP)", tcp_Addr)
+print("Connection from: (TCP)", tcp_Addr)
 
 # Create a new thread to handle the client
 client_thread = threading.Thread(target=handle_client, args=(addr, addr1, tcp_Addr))

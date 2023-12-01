@@ -22,16 +22,8 @@ def get_ip_address():
         print("Error occurred:", e)
         return None
 
-# Creating a socket for client (TCP socket)
-tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# Creating a socket for client (UDP socket)
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-
-# Define server's address
+# Define server's address for path 1 
 server_ip = get_ip_address()
 
 if server_ip:
@@ -41,29 +33,43 @@ else:
     sys.exit(1)
 
 
-server_port = 12345
-server_port1 = 12347
-tcp_server_port = 12346
+#************Path 1****************
+# Creating a socket for client (UDP socket)
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+server_port = 12345 #path1
 server_addr_port = (server_ip, server_port)
-
-server_addr_port1 = (server_ip, server_port1)
-tcp_server_addr_port = (server_ip, tcp_server_port)
 
 # Initiating the connection with server_socket using UDP
 client_socket.sendto("Initial Message".encode(), server_addr_port)
 
-client_socket2.sendto("Initial Message".encode(), server_addr_port1)
+#************Path 2****************
+client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+server_port1 = 12347 #path2
+server_ip2 = "192.168.29.64"
+
+server_addr_port1 = (server_ip2, server_port1)
+
+bytes = client_socket2.sendto("Initial Message".encode(), server_addr_port1)
+# print(bytes)
+
+#*********Helper Path**********
+# Creating a socket for client (TCP socket)
+tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcp_server_port = 12346
+tcp_server_addr_port = (server_ip, tcp_server_port)
 
 # Connect to the TCP server
 tcp_socket.connect(tcp_server_addr_port)
 print("Connected to TCP SERVER:", tcp_server_addr_port)
 
+
+#*************Useful variables**************
 frame_data = b""
 expected_frame_size = 0
 frames_displayed = 0
 frames_sent = 0
-
 
 fps, st, frame_cnt, count = (0, 0, 20, 0)
 displays = 0
@@ -72,10 +78,11 @@ num = 0
 timestamp = ""
 
 latency_list = [0]
-socketNumber = 1
+socketNumber = "1"
+
+
 # Create a queue for frame data
 frame_queue = queue.Queue()
-
 
 def receive_frame_size():
     global expected_frame_size, latency_list, frames_sent, socketNumber
@@ -90,7 +97,7 @@ def receive_frame_size():
 
         # Process complete frame size info
         if len(frame_info_parts) > 1:
-            socketNumber = int(frame_info_parts[1][0])
+            socketNumber = chr(int(frame_info_parts[1][0]))
             timestamp = (float)(packet[2:17].decode())
             idx = len(latency_list) - 1
             val = (int)((time.time() - latency_list[idx])*1000)
@@ -98,19 +105,15 @@ def receive_frame_size():
             latency_list[idx] = val
             latency_list.append(timestamp)
             expected_frame_size = int(frame_info_parts[1][16:].decode())
-            print(socketNumber, " Frame parts ", frame_info_parts, " Received frame size through TCP socket:", expected_frame_size)
-
             # Remove the processed part from the buffer
             frame_info = b"".join(frame_info_parts[2:])
 
         if not packet:
             break
 
-
 # Create a thread to handle the reception of the initial frame size
 receive_frame_size_thread = threading.Thread(target=receive_frame_size)
 receive_frame_size_thread.start()
-
 
 # Function to process frames
 def process_frames():
@@ -132,21 +135,22 @@ def process_frames():
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             cv2.destroyAllWindows()
-            # client_socket.close()
+            client_socket.close()
+            client_socket2.close()
+            tcp_socket.close()
             break
 
 # Function to receive data and manage frames
 def receive_data():
-    global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent, socketNumber
+    global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent
     while True:
         packet = None
-        if(socketNumber == 1):
+        ret = None
+        if(socketNumber == "1"):
             packet, ret = client_socket.recvfrom(BUFFER_SIZE)
-        elif(socketNumber == 2):
+        elif(socketNumber == "2"):
             packet, ret = client_socket2.recvfrom(BUFFER_SIZE)
-        
-        # print(socketNumber, " ", packet)
-
+            
         # Checking for ending-frame:
         if(packet.startswith(b'@')):
             frames_sent = (int)(packet.decode().split('@')[1])
@@ -195,6 +199,10 @@ receive_thread.join()
 
 # Close the client socket when done.
 client_socket.close()
+client_socket2.close()
+tcp_socket.close()
+
+
 # cv2.destroyAllWindows()
 print("Frames sent - ", frames_sent, " Frames displayed - ", frames_displayed)
 packet_loss = max(0, (frames_sent - frames_displayed)*100/(frames_sent))
