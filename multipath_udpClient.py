@@ -52,7 +52,7 @@ server_ip2 = "192.168.29.64"
 server_addr_port1 = (server_ip2, server_port1)
 
 bytes = client_socket2.sendto("Initial Message".encode(), server_addr_port1)
-# print(bytes)
+
 
 #*********Helper Path**********
 # Creating a socket for client (TCP socket)
@@ -63,6 +63,17 @@ tcp_server_addr_port = (server_ip, tcp_server_port)
 # Connect to the TCP server
 tcp_socket.connect(tcp_server_addr_port)
 print("Connected to TCP SERVER:", tcp_server_addr_port)
+
+
+#***************************Sockets for RTT calculation communication******************
+# udpPath1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# udpPath2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# dataPath1, addrPath1 = udpPath1.sendto("Path 1 Hello".encode(), (server_ip, 11111))
+# print("Connection Established for RTT calc. PATH1 - ", addrPath1)
+
+# dataPath2, addrPath2 = udpPath2.sendto("Path 2 Hello".encode(), (server_ip2, 11111))
+# print("Connection Established for RTT calc. PATH2 - ", addrPath2)
 
 
 #*************Useful variables**************
@@ -81,11 +92,23 @@ latency_list = [0]
 socketNumber = "1"
 
 
+path1Packets = 0
+path2Packets = 0
+
+temp = 0
 # Create a queue for frame data
 frame_queue = queue.Queue()
 
+
+#Needs to be completed for RTT communication
+
+# def rttCommunication():
+
+
+
+
 def receive_frame_size():
-    global expected_frame_size, latency_list, frames_sent, socketNumber
+    global expected_frame_size, latency_list, frames_sent, socketNumber, temp
     frame_info = b""  # Initialize an empty buffer to store received data
 
     while True:
@@ -107,7 +130,8 @@ def receive_frame_size():
             expected_frame_size = int(frame_info_parts[1][16:].decode())
             # Remove the processed part from the buffer
             frame_info = b"".join(frame_info_parts[2:])
-
+            if(socketNumber == "2"):
+                temp += 1
         if not packet:
             break
 
@@ -142,14 +166,17 @@ def process_frames():
 
 # Function to receive data and manage frames
 def receive_data():
-    global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent
+    global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent, socketNumber, path1Packets, path2Packets
     while True:
         packet = None
         ret = None
+        
         if(socketNumber == "1"):
             packet, ret = client_socket.recvfrom(BUFFER_SIZE)
+            path1Packets += 1
         elif(socketNumber == "2"):
             packet, ret = client_socket2.recvfrom(BUFFER_SIZE)
+            path2Packets += 1
             
         # Checking for ending-frame:
         if(packet.startswith(b'@')):
@@ -209,3 +236,7 @@ packet_loss = max(0, (frames_sent - frames_displayed)*100/(frames_sent))
 print("VIDEO FRAMES LOSS:", round(packet_loss,4), end =" %\n")
 print("AVERAGE LATENCY:", sum(latency_list)/len(latency_list))
 print("Successfully Terminated Client Program.")
+
+print("Packets received on Path 1:", path1Packets)
+#This {temp} variable is incremented in the receive_frame_size function
+print(" Packets received on Path 2:", path2Packets, " ", temp)

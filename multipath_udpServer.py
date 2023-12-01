@@ -8,15 +8,61 @@ import sys
 
 
 BUFF_SIZE = 1500
+NUM_PACKETS = 10
+PATH = "1"
+
+
+count = 0
+
+path1_Medians = []
+path2_Medians = []
+
+def send_and_measure_rtt(sock, rtt_list, addr):
+    UDP_IP = addr[0]
+    UDP_PORT_CLIENT = addr[1]
+
+    for _ in range(NUM_PACKETS):
+        start_time = time.time()
+        sock.sendto(b'Ping', (UDP_IP, UDP_PORT_CLIENT))
+        data, _ = sock.recvfrom(BUFF_SIZE)
+        end_time = time.time()
+        rtt = (end_time - start_time) * 1000  # Convert to milliseconds
+        rtt_list.append(rtt)
+        print(f"Received echo on port {UDP_PORT_CLIENT}: {data.decode()} | RTT: {rtt:.2f} ms")
+
+def decidePath(Path1, Path2):
+    global count
+    while(1):
+        if(count % 10 == 0):
+            send_and_measure_rtt(udpPath1, path1_Medians, Path1)
+            send_and_measure_rtt(udpPath2, path2_Medians, Path2)
+
+            medianPath1 = np.median(path1_Medians)
+            medianPath2 = np.median(path2_Medians)
+
+            if(medianPath1 > medianPath2):
+                print("Median after {count} frames - Path1 - {medianPath1}ms, Path2 - {medianPath2}ms")
+                PATH = "2"
+            else:
+                print("Median after {count} frames - Path1 - {medianPath1}ms, Path2 - {medianPath2}ms")
+                PATH = "1"
+
+            path1_Medians.clear()
+            path2_Medians.clear()
+        else:
+            continue
+
 # Method responsible ffor handling the client_connection.
 def handle_client(addr, addr1, tcp_Addr):
     # print('Client connected from:', addr)
-
-    fps, st, frames_cnt, count = (0, 0, 20, 0)
+    global count
+    fps, st, frames_cnt = (0, 0, 20)
     display = 0
     change = 1
     vid = cv2.VideoCapture("Short.mp4")
 
+    path1Packets = 0
+    path2Packets = 0
     while vid.isOpened(): 
 
         ret, frame = vid.read()
@@ -34,7 +80,7 @@ def handle_client(addr, addr1, tcp_Addr):
             change ^= 1
 
         # Encoding the frame and obtaining a buffer out of it. (buffer contains byte-array -> pixel values)
-        encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+        encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
         # Calculate the size of the frame buffer.
         frame_size = len(buffer)
         timestamp = "{:.4f}".format(time.time())
@@ -65,8 +111,10 @@ def handle_client(addr, addr1, tcp_Addr):
             encoded_chunk = base64.b64encode(chunk)
             if(not change):
                 server_socket.sendto(encoded_chunk, addr)
+                path1Packets += 1
             else:
                 server_socket2.sendto(encoded_chunk, addr1)
+                path2Packets += 1
 
             # print(display," ", encoded_chunk)
             if(encoded_chunk == None):
@@ -111,6 +159,9 @@ def handle_client(addr, addr1, tcp_Addr):
     tcp_Server_Socket.close()
 
     print('Successfully terminated connection with the client:', addr)
+
+    print("Packets received on Path 1:", path1Packets)
+    print("Packets received on Path 2:", path2Packets)
 
 def get_ip_address():
     try:
@@ -175,6 +226,25 @@ print('Connection from: (UDP)', addr1)
 
 tcp_Socket, tcp_Addr = tcp_Server_Socket.accept()
 print("Connection from: (TCP)", tcp_Addr)
+
+
+#***************Sockets for RTT calculation communication*****************
+udpPath1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udpPath2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+
+# udpPath1.bind((host_ip, 11111))
+# udpPath2.bind((host_ip2, 11111))
+
+# dataPath1, addrPath1 = udpPath1.recvfrom(BUFF_SIZE)
+# print("Connection Established for RTT calc. PATH1 - ", addrPath1)
+
+# dataPath2, addrPath2 = udpPath2.recvfrom(BUFF_SIZE)
+# print("Connection Established for RTT calc. PATH2 - ", addrPath2)
+
+# rttThread = threading.Thread(target = decidePath, args=(addrPath1, addrPath2))
+# rttThread.start()
+
 
 # Create a new thread to handle the client
 client_thread = threading.Thread(target=handle_client, args=(addr, addr1, tcp_Addr))
