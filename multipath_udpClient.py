@@ -163,18 +163,18 @@ def process_frames():
             break
 
 # Function to receive data and manage frames
-def receive_data():
+def receive_data_path1():
     global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent, path1Packets, path2Packets
     while True:
         packet = None
         # ret = None
         global socketNumber
-        if(socketNumber == "1"):
-            packet, ret = client_socket.recvfrom(BUFFER_SIZE)
-            path1Packets += 1
-        elif(socketNumber == "2"):
-            packet, ret = client_socket2.recvfrom(BUFFER_SIZE)
-            path2Packets += 1
+        # if(socketNumber == "1"):
+        packet, ret = client_socket.recvfrom(BUFFER_SIZE)
+        path1Packets += 1
+        # elif(socketNumber == "2"):
+        #     packet, ret = client_socket2.recvfrom(BUFFER_SIZE)
+        #     path2Packets += 1
             
         # Checking for ending-frame:
         if(packet.startswith(b'@')):
@@ -212,11 +212,64 @@ def receive_data():
             frame_data = b""
 
 
+def receive_data_path2():
+    global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent, path1Packets, path2Packets
+    while True:
+        packet = None
+        # ret = None
+        global socketNumber
+        # if(socketNumber == "1"):
+        packet, ret = client_socket2.recvfrom(BUFFER_SIZE)
+        path2Packets += 1
+        # elif(socketNumber == "2"):
+        #     packet, ret = client_socket2.recvfrom(BUFFER_SIZE)
+        #     path2Packets += 1
+            
+        # Checking for ending-frame:
+        if(packet.startswith(b'@')):
+            # frames_sent = (int)(packet.decode().split('@')[1])
+            # print("Received All Video Frames - ", frames_sent)
+            # # Plotting Network Latency
+            # latency_list.pop(0)
+            # latency_list.pop(len(latency_list)-1)
+            # x =  [i for i in range(1, len(latency_list) + 1)]
+            # plt.switch_backend('Agg')  
+            # plt.figure(figsize=(20, 10))
+            # plt.scatter(x, latency_list)
+            # plt.xlabel('Frame Number')
+            # plt.ylabel('Network Latency (in milliseconds)')
+            # plt.savefig('plot.png')
+            # # print("SAVED IMAGE")
+            break
+        else:
+            data = base64.b64decode(packet)
+            frame_data += data
+            chunks += 1
+        
+        if len(frame_data) >= expected_frame_size:
+            displays += 1
+            # print("Time - ", timestamp, "Curr-Time ", str(time.time()),"Frame NUM - ", displays, " chunks - ", chunks, " expec_frame_size - ", expected_frame_size, " frame_data - ", len(frame_data))
+            if count == frame_cnt:
+                try:
+                    fps = round(frame_cnt / (time.time() - st))
+                    st = time.time()
+                    count = 0
+                except:
+                    pass
+            count += 1
+            frame_queue.put(frame_data)
+            frame_data = b""
+
+
+
 
 
 # Create a thread for receiving data.
-receive_thread = threading.Thread(target=receive_data)
+receive_thread = threading.Thread(target=receive_data_path1)
 receive_thread.start()
+
+receive_thread2 = threading.Thread(target=receive_data_path2)
+receive_thread2.start()
 
 # Running processing_frames() on main thread.
 process_frames()
@@ -226,9 +279,9 @@ receive_thread.join()
 
 
 # Close the client socket when done.
-client_socket.close()
-client_socket2.close()
-tcp_socket.close()
+# client_socket.close()
+# client_socket2.close()
+# tcp_socket.close()
 
 
 # cv2.destroyAllWindows()

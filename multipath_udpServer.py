@@ -150,6 +150,7 @@ def handle_client(addr, addr1, tcp_Addr):
     end_string = "@" + str(display-1)
     print("Last frame data - ", end_string)
     server_socket.sendto(end_string.encode(), addr)
+    server_socket2.sendto(end_string.encode(), addr1)
 
     # Logging connection termination event at server-side.
     server_socket.close()
@@ -228,8 +229,8 @@ print("Connection from: (TCP)", tcp_Addr)
 
 
 #***************Sockets for RTT calculation communication*****************
-udpPath1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udpPath2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udpPath1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+udpPath2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
 # udpPath1.bind((host_ip, 11111))
