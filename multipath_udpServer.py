@@ -13,8 +13,8 @@ PATH = "1"
 
 count = 0
 
-path1_Medians = []
-path2_Medians = []
+path1_rtt = []
+path2_rtt = []
 
 def send_and_measure_rtt(sock, rtt_list, addr):
     UDP_IP = addr[0]
@@ -33,11 +33,30 @@ def decidePath(Path1, Path2):
     global count
     while(1):
         if(count % 10 == 0):
-            send_and_measure_rtt(udpPath1, path1_Medians, Path1)
-            send_and_measure_rtt(udpPath2, path2_Medians, Path2)
 
-            medianPath1 = np.median(path1_Medians)
-            medianPath2 = np.median(path2_Medians)
+            for _ in range(NUM_PACKETS):
+                start_time = time.time()
+                mssg = "Ping Path1"
+                tcpPath1.sendall(mssg.encode())
+                data, _ = tcpPath1.recv(BUFF_SIZE)
+                end_time = time.time()
+                rtt = (end_time - start_time) * 1000
+                path1_rtt.append(rtt)
+                print(f"Receieved echo on port {Path1[1]}: {data.decode()} | RTT: {rtt: 2f} ms")
+
+
+                start_time = time.time()
+                mssg = "Ping Path2"
+                tcpPath2.sendall(mssg.encode())
+                data, _ = tcpPath2.recv(BUFF_SIZE)
+                end_time = time.time()
+                rtt = (end_time - start_time) * 1000
+                path2_rtt.append(rtt)
+                print(f"Receieved echo on port {Path2[1]}: {data.decode()} | RTT: {rtt: 2f} ms")
+
+
+            medianPath1 = np.median(path1_rtt)
+            medianPath2 = np.median(path2_rtt)
 
             if(medianPath1 > medianPath2):
                 print("Median after {count} frames - Path1 - {medianPath1}ms, Path2 - {medianPath2}ms")
@@ -46,8 +65,8 @@ def decidePath(Path1, Path2):
                 print("Median after {count} frames - Path1 - {medianPath1}ms, Path2 - {medianPath2}ms")
                 PATH = "1"
 
-            path1_Medians.clear()
-            path2_Medians.clear()
+            path1_rtt.clear()
+            path2_rtt.clear()
         else:
             continue
 
@@ -79,7 +98,7 @@ def handle_client(addr, addr1, tcp_Addr):
             change ^= 1
 
         # Encoding the frame and obtaining a buffer out of it. (buffer contains byte-array -> pixel values)
-        encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
         # Calculate the size of the frame buffer.
         frame_size = len(buffer)
         timestamp = "{:.4f}".format(time.time())
@@ -229,21 +248,28 @@ print("Connection from: (TCP)", tcp_Addr)
 
 
 #***************Sockets for RTT calculation communication*****************
-udpPath1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-udpPath2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcpPath1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcpPath2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
-# udpPath1.bind((host_ip, 11111))
-# udpPath2.bind((host_ip2, 11111))
+tcpPath1.bind((host_ip, 11111))
+tcpPath2.bind((host_ip2, 11111))
 
-# dataPath1, addrPath1 = udpPath1.recvfrom(BUFF_SIZE)
-# print("Connection Established for RTT calc. PATH1 - ", addrPath1)
+tcpPath1.listen(5)
+tcpPath2.listen(5)
 
-# dataPath2, addrPath2 = udpPath2.recvfrom(BUFF_SIZE)
-# print("Connection Established for RTT calc. PATH2 - ", addrPath2)
+dataPath1, addrPath1 = tcpPath1.accept()
+print("Connection Established for RTT calc. PATH1 - ", addrPath1)
 
-# rttThread = threading.Thread(target = decidePath, args=(addrPath1, addrPath2))
-# rttThread.start()
+dataPath2, addrPath2 = tcpPath2.accept()
+print("Connection Established for RTT calc. PATH2 - ", addrPath2)
+
+#Sample mssges
+# tcpPath1.sendall("Testing Path1".encode())
+# tcpPath2.sendall("Testing Path2".encode())
+
+rttThread = threading.Thread(target = decidePath, args=(addrPath1, addrPath2))
+rttThread.start()
 
 
 # Create a new thread to handle the client

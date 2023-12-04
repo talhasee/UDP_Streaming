@@ -66,14 +66,12 @@ print("Connected to TCP SERVER:", tcp_server_addr_port)
 
 
 #***************************Sockets for RTT calculation communication******************
-# udpPath1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# udpPath2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+tcpPath1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+tcpPath2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# dataPath1, addrPath1 = udpPath1.sendto("Path 1 Hello".encode(), (server_ip, 11111))
-# print("Connection Established for RTT calc. PATH1 - ", addrPath1)
+tcpPath1.connect((server_ip, 11111))
 
-# dataPath2, addrPath2 = udpPath2.sendto("Path 2 Hello".encode(), (server_ip2, 11111))
-# print("Connection Established for RTT calc. PATH2 - ", addrPath2)
+tcpPath2.connect((server_ip2, 11111))
 
 
 #*************Useful variables**************
@@ -102,7 +100,19 @@ frame_queue = queue.Queue()
 
 #Needs to be completed for RTT communication
 
-# def rttCommunication():
+def rttCommunication():
+    while(1):
+        packet = tcpPath1.recv(BUFFER_SIZE)
+        print("path1 - ", packet.decode())
+        mssg = "Ping response path1"
+        tcpPath1.send(mssg.encode())
+        packet = tcpPath2.recv(BUFFER_SIZE)
+        print("path2 - ", packet.decode())
+        mssg = "Ping response path2"
+        tcpPath2.send(mssg.encode())
+
+rttCalcThread = threading.Thread(target=rttCommunication)
+rttCalcThread.start()
 
 def receive_frame_size():
     global expected_frame_size, latency_list, frames_sent, temp
