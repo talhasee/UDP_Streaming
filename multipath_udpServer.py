@@ -11,7 +11,6 @@ BUFF_SIZE = 1500
 NUM_PACKETS = 10
 PATH = "1"
 
-
 count = 0
 
 path1_Medians = []
@@ -117,8 +116,8 @@ def handle_client(addr, addr1, tcp_Addr):
                 path2Packets += 1
 
             # print(display," ", encoded_chunk)
-            if(encoded_chunk == None):
-                print("yes")
+            # if(encoded_chunk == None):
+            #     print("yes")
 
         # Displaying the frame statistics at server side (for debugging purpose).
         # print("Frame -Time ", timestamp, "FRAME NUM - ", display ," ", frame_size, " SENT chunks - ", chunks)
@@ -160,8 +159,8 @@ def handle_client(addr, addr1, tcp_Addr):
 
     print('Successfully terminated connection with the client:', addr)
 
-    print("Packets received on Path 1:", path1Packets)
-    print("Packets received on Path 2:", path2Packets)
+    print("Packets Sent on Path 1:", path1Packets)
+    print("Packets Sent on Path 2:", path2Packets)
 
 def get_ip_address():
     try:
@@ -198,7 +197,7 @@ else:
 port = 12345
 port1 = 12347
 tcp_port = 12346
-host_ip2 = "192.168.29.64"
+host_ip2 = "192.168.29.98"
 socket_address = (host_ip, port)
 socket_address2 = (host_ip2, port1)
 

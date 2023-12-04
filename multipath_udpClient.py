@@ -47,7 +47,7 @@ client_socket.sendto("Initial Message".encode(), server_addr_port)
 client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 server_port1 = 12347 #path2
-server_ip2 = "192.168.29.64"
+server_ip2 = "192.168.29.98"
 
 server_addr_port1 = (server_ip2, server_port1)
 
@@ -104,11 +104,8 @@ frame_queue = queue.Queue()
 
 # def rttCommunication():
 
-
-
-
 def receive_frame_size():
-    global expected_frame_size, latency_list, frames_sent, socketNumber, temp
+    global expected_frame_size, latency_list, frames_sent, temp
     frame_info = b""  # Initialize an empty buffer to store received data
 
     while True:
@@ -120,6 +117,7 @@ def receive_frame_size():
 
         # Process complete frame size info
         if len(frame_info_parts) > 1:
+            global socketNumber
             socketNumber = chr(int(frame_info_parts[1][0]))
             timestamp = (float)(packet[2:17].decode())
             idx = len(latency_list) - 1
@@ -166,11 +164,11 @@ def process_frames():
 
 # Function to receive data and manage frames
 def receive_data():
-    global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent, socketNumber, path1Packets, path2Packets
+    global frame_data, displays, fps, st, count, chunks, num, timestamp, frames_sent, path1Packets, path2Packets
     while True:
         packet = None
-        ret = None
-        
+        # ret = None
+        global socketNumber
         if(socketNumber == "1"):
             packet, ret = client_socket.recvfrom(BUFFER_SIZE)
             path1Packets += 1
@@ -212,6 +210,9 @@ def receive_data():
             count += 1
             frame_queue.put(frame_data)
             frame_data = b""
+
+
+
 
 # Create a thread for receiving data.
 receive_thread = threading.Thread(target=receive_data)
