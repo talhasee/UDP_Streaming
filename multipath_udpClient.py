@@ -103,11 +103,11 @@ frame_queue = queue.Queue()
 def rttCommunication():
     while(1):
         packet = tcpPath1.recv(BUFFER_SIZE)
-        print("path1 - ", packet.decode())
+        # print("path1 - ", packet.decode())
         mssg = "Ping response path1"
         tcpPath1.send(mssg.encode())
         packet = tcpPath2.recv(BUFFER_SIZE)
-        print("path2 - ", packet.decode())
+        # print("path2 - ", packet.decode())
         mssg = "Ping response path2"
         tcpPath2.send(mssg.encode())
 

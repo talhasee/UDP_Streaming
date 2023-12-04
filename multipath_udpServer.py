@@ -12,7 +12,7 @@ NUM_PACKETS = 10
 PATH = "1"
 
 count = 0
-
+TERMINATE = False
 path1_rtt = []
 path2_rtt = []
 
@@ -30,50 +30,49 @@ def send_and_measure_rtt(sock, rtt_list, addr):
         print(f"Received echo on port {UDP_PORT_CLIENT}: {data.decode()} | RTT: {rtt:.2f} ms")
 
 def decidePath(Path1, Path2):
-    global count
-    while(1):
-        if(count % 10 == 0):
+    global count, TERMINATE
+    while not TERMINATE:
+        time.sleep(time_interval)
+        for _ in range(NUM_PACKETS):
+            start_time = time.time()
+            mssg = "Ping Path1"
+            tcpPath1Sock.sendall(mssg.encode())
+            data = tcpPath1Sock.recv(BUFF_SIZE)
+            end_time = time.time()
+            rtt = (end_time - start_time)
+            path1_rtt.append(rtt)
+            # print(f"Received echo on port {Path1[1]}: {data.decode()} | RTT: {rtt:.2f} ms")
 
-            for _ in range(NUM_PACKETS):
-                start_time = time.time()
-                mssg = "Ping Path1"
-                tcpPath1.sendall(mssg.encode())
-                data, _ = tcpPath1.recv(BUFF_SIZE)
-                end_time = time.time()
-                rtt = (end_time - start_time) * 1000
-                path1_rtt.append(rtt)
-                print(f"Receieved echo on port {Path1[1]}: {data.decode()} | RTT: {rtt: 2f} ms")
+            start_time = time.time()
+            mssg = "Ping Path2"
+            tcpPath2Sock.sendall(mssg.encode())
+            data = tcpPath2Sock.recv(BUFF_SIZE)
+            end_time = time.time()
+            rtt = (end_time - start_time)
+            path2_rtt.append(rtt)
+            # print(f"Received echo on port {Path2[1]}: {data.decode()} | RTT: {rtt:.2f} ms")
 
+        medianPath1 = np.median(path1_rtt)
+        medianPath2 = np.median(path2_rtt)
 
-                start_time = time.time()
-                mssg = "Ping Path2"
-                tcpPath2.sendall(mssg.encode())
-                data, _ = tcpPath2.recv(BUFF_SIZE)
-                end_time = time.time()
-                rtt = (end_time - start_time) * 1000
-                path2_rtt.append(rtt)
-                print(f"Receieved echo on port {Path2[1]}: {data.decode()} | RTT: {rtt: 2f} ms")
-
-
-            medianPath1 = np.median(path1_rtt)
-            medianPath2 = np.median(path2_rtt)
-
-            if(medianPath1 > medianPath2):
-                print("Median after {count} frames - Path1 - {medianPath1}ms, Path2 - {medianPath2}ms")
-                PATH = "2"
-            else:
-                print("Median after {count} frames - Path1 - {medianPath1}ms, Path2 - {medianPath2}ms")
-                PATH = "1"
-
-            path1_rtt.clear()
-            path2_rtt.clear()
+        if medianPath1 > medianPath2:
+            print(path1_rtt)
+            print(f"Median after {count} frames - Path1 - {medianPath1} ms, Path2 - {medianPath2} ms")
+            PATH = "2"
         else:
-            continue
+            print(path2_rtt)
+            print(f"Median after {count} frames - Path1 - {medianPath1} ms, Path2 - {medianPath2} ms")
+            PATH = "1"
+
+        path1_rtt.clear()
+        path2_rtt.clear()
+
+        
 
 # Method responsible ffor handling the client_connection.
 def handle_client(addr, addr1, tcp_Addr):
     # print('Client connected from:', addr)
-    global count
+    global count, TERMINATE
     fps, st, frames_cnt = (0, 0, 20)
     display = 0
     change = 1
@@ -151,6 +150,8 @@ def handle_client(addr, addr1, tcp_Addr):
         if key == ord('q'):
             server_socket.close()
             server_socket2.close()
+            tcp_Socket.close()
+            TERMINATE = True
             break
 
         if count == frames_cnt:
@@ -176,6 +177,8 @@ def handle_client(addr, addr1, tcp_Addr):
     server_socket2.close()
 
     tcp_Server_Socket.close()
+
+    TERMINATE = True
 
     print('Successfully terminated connection with the client:', addr)
 
@@ -258,16 +261,17 @@ tcpPath2.bind((host_ip2, 11111))
 tcpPath1.listen(5)
 tcpPath2.listen(5)
 
-dataPath1, addrPath1 = tcpPath1.accept()
+tcpPath1Sock, addrPath1 = tcpPath1.accept()
 print("Connection Established for RTT calc. PATH1 - ", addrPath1)
 
-dataPath2, addrPath2 = tcpPath2.accept()
+tcpPath2Sock, addrPath2 = tcpPath2.accept()
 print("Connection Established for RTT calc. PATH2 - ", addrPath2)
 
 #Sample mssges
 # tcpPath1.sendall("Testing Path1".encode())
 # tcpPath2.sendall("Testing Path2".encode())
 
+time_interval = 4
 rttThread = threading.Thread(target = decidePath, args=(addrPath1, addrPath2))
 rttThread.start()
 
