@@ -9,28 +9,16 @@ import sys
 
 BUFF_SIZE = 1500
 NUM_PACKETS = 10
-PATH = "1"
+PATH = "1" #chosen path
 
 count = 0
 TERMINATE = False
 path1_rtt = []
 path2_rtt = []
 
-def send_and_measure_rtt(sock, rtt_list, addr):
-    UDP_IP = addr[0]
-    UDP_PORT_CLIENT = addr[1]
-
-    for _ in range(NUM_PACKETS):
-        start_time = time.time()
-        sock.sendto(b'Ping', (UDP_IP, UDP_PORT_CLIENT))
-        data, _ = sock.recvfrom(BUFF_SIZE)
-        end_time = time.time()
-        rtt = (end_time - start_time) * 1000  # Convert to milliseconds
-        rtt_list.append(rtt)
-        print(f"Received echo on port {UDP_PORT_CLIENT}: {data.decode()} | RTT: {rtt:.2f} ms")
-
 def decidePath(Path1, Path2):
-    global count, TERMINATE
+    global count, TERMINATE, PATH
+    time_interval = 3
     while not TERMINATE:
         time.sleep(time_interval)
         for _ in range(NUM_PACKETS):
@@ -48,18 +36,18 @@ def decidePath(Path1, Path2):
             tcpPath2Sock.sendall(mssg.encode())
             data = tcpPath2Sock.recv(BUFF_SIZE)
             end_time = time.time()
-            rtt = (end_time - start_time)
+            rtt = (end_time - start_time) 
             path2_rtt.append(rtt)
             # print(f"Received echo on port {Path2[1]}: {data.decode()} | RTT: {rtt:.2f} ms")
 
         medianPath1 = np.median(path1_rtt)
         medianPath2 = np.median(path2_rtt)
-
+        # print(path1_rtt, path2_rtt)
         if medianPath1 > medianPath2:
             print(path1_rtt)
             print(f"Median after {count} frames - Path1 - {medianPath1} ms, Path2 - {medianPath2} ms")
             PATH = "2"
-        else:
+        elif medianPath1 < medianPath2:
             print(path2_rtt)
             print(f"Median after {count} frames - Path1 - {medianPath1} ms, Path2 - {medianPath2} ms")
             PATH = "1"
@@ -93,8 +81,10 @@ def handle_client(addr, addr1, tcp_Addr):
             print("Empty frame")
             continue
         #do we have to change the socket or not
-        if count % 10 == 0:
-            change ^= 1
+        if PATH == 1:
+            change = 1
+        elif PATH == 2:
+            change == 2
 
         # Encoding the frame and obtaining a buffer out of it. (buffer contains byte-array -> pixel values)
         encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
@@ -104,9 +94,9 @@ def handle_client(addr, addr1, tcp_Addr):
 
         # Convert the frame size to a string and prefix it with a delimiter (e.g., '|')
 
-        if(not change):
+        if(change == 1):
             frame_size_str = "|1" + timestamp + str(frame_size)
-        else:
+        elif change == 2:
             frame_size_str = "|2" + timestamp + str(frame_size)
 
         # Updating the frame_displayed_count.
@@ -126,16 +116,12 @@ def handle_client(addr, addr1, tcp_Addr):
             chunks += 1
             chunk = buffer[i:i + chunk_size]
             encoded_chunk = base64.b64encode(chunk)
-            if(not change):
+            if(change == 1):
                 server_socket.sendto(encoded_chunk, addr)
                 path1Packets += 1
-            else:
+            elif change == 2:
                 server_socket2.sendto(encoded_chunk, addr1)
                 path2Packets += 1
-
-            # print(display," ", encoded_chunk)
-            # if(encoded_chunk == None):
-            #     print("yes")
 
         # Displaying the frame statistics at server side (for debugging purpose).
         # print("Frame -Time ", timestamp, "FRAME NUM - ", display ," ", frame_size, " SENT chunks - ", chunks)
